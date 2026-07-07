@@ -1,4 +1,4 @@
-CREATE TABLE repos (
+CREATE TABLE IF NOT EXISTS repos (
     id INTEGER PRIMARY KEY,
     owner TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE repos (
     UNIQUE(owner, name)
 ) STRICT;
 
-CREATE TABLE commits (
+CREATE TABLE IF NOT EXISTS commits (
     sha TEXT PRIMARY KEY,
     repo_id INTEGER NOT NULL,
     message TEXT,
@@ -16,7 +16,7 @@ CREATE TABLE commits (
     FOREIGN KEY (repo_id) REFERENCES repos(id)
 ) STRICT;
 
-CREATE TABLE commit_files (
+CREATE TABLE IF NOT EXISTS commit_files (
     id INTEGER PRIMARY KEY,
     commit_sha TEXT NOT NULL,
     previous_filename TEXT,
@@ -26,7 +26,7 @@ CREATE TABLE commit_files (
     FOREIGN KEY (commit_sha) REFERENCES commits(sha)
 ) STRICT;
 
-CREATE TABLE summaries (
+CREATE TABLE IF NOT EXISTS summaries (
     commit_sha TEXT,
     repo_id INTEGER NOT NULL,
     filename TEXT NOT NULL,
