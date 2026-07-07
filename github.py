@@ -31,3 +31,24 @@ def github_pagination(owner, name):
         url = next_url["url"]
     return shas
 
+
+def fetch_commit_detail(owner, name, sha):
+    url = f"{BASE_URL}repos/{owner}/{name}/commits/{sha}"
+    r = github_get(url)
+    data = r.json()
+    result = {
+        "sha": data["sha"],
+        "message": data["commit"]["message"],
+        "author": data["commit"]["author"]["name"],
+        "committed_at": data["commit"]["committer"]["date"],
+        "files": [
+            {
+                "filename": f["filename"],
+                "additions": f["additions"],
+                "deletions": f["deletions"],
+                "previous_filename": f.get("previous_filename")
+            }
+            for f in data["files"]
+        ]
+    }
+    return result
