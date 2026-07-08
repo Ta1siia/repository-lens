@@ -20,6 +20,7 @@ def github_get(url):
 def github_pagination(owner, name):
     url = f"{BASE_URL}repos/{owner}/{name}/commits?per_page=100"
     shas = []
+    # AI assistance from Claude: explaining the pagination and the loop algorithm
     while True:
         r = github_get(url)
         shas.extend(c["sha"] for c in r.json())
@@ -36,6 +37,7 @@ def fetch_commit_detail(owner, name, sha):
     url = f"{BASE_URL}repos/{owner}/{name}/commits/{sha}"
     r = github_get(url)
     data = r.json()
+    # AI assistance from Claude: explaining the structure of the response
     result = {
         "sha": data["sha"],
         "message": data["commit"]["message"],

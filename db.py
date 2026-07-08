@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime, timezone
 
 DB_PATH = "db/repolens.db"
 
@@ -8,6 +9,40 @@ def get_connection():
     con.execute("PRAGMA foreign_keys = ON")
     return con
 
+def write_commit(con, result, repo_id):
+    con.execute(
+        "INSERT INTO commits (sha, repo_id, message, author, committed_at) VALUES (?, ?, ?, ?, ?)",
+        (result["sha"], repo_id, result["message"], result["author"], result["committed_at"]),
+    )
+    for f in result["files"]:
+        con.execute(
+            "INSERT INTO commit_files (commit_sha, previous_filename, filename, additions, deletions) VALUES (?, ?, ?, ?, ?)",
+            (result["sha"], f["previous_filename"], f["filename"], f["additions"], f["deletions"]),
+        )
+    con.commit()
+
+def commit_exists(con, sha):
+    return con.execute("SELECT 1 FROM commits WHERE sha = ? LIMIT 1", (sha,)).fetchone() is not None
+
+def get_or_create_repo(con, owner, name):
+    existing = con.execute(
+        "SELECT id FROM repos WHERE owner = ? AND name = ?", (owner, name)
+    ).fetchone()
+    if existing is not None:
+        return existing["id"]
+    new_id = con.execute(
+        "INSERT INTO repos (owner, name) VALUES (?, ?)", (owner, name)
+    ).lastrowid
+    con.commit()
+    return new_id
+
+def update_last_synced(con, repo_id, sha):
+    con.execute(
+        "UPDATE repos SET last_synced_sha = ?, last_synced_at = ? WHERE id = ?",
+        (sha, datetime.now(timezone.utc).isoformat(), repo_id),
+    )
+    con.commit()
+
 def init_db():
     con = get_connection()
     with open("db/schema.sql") as file:
@@ -15,6 +50,3 @@ def init_db():
     con.executescript(schema_sql)
     con.commit()
     con.close()
-
-if __name__ == "__main__":
-    init_db()
