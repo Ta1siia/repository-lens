@@ -14,7 +14,9 @@ def github_get(url):
     'Accept': 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2026-03-10',
     }
-    return requests.get(url, headers=headers)
+    r = requests.get(url, headers=headers)
+    r.raise_for_status()
+    return r
 
 
 def github_pagination(owner, name):
@@ -31,6 +33,15 @@ def github_pagination(owner, name):
             break
         url = next_url["url"]
     return shas
+
+
+def get_head_sha(owner, name):
+    url = f"{BASE_URL}repos/{owner}/{name}/commits?per_page=1"
+    r = github_get(url)
+    data = r.json()
+    if not data:
+        return None
+    return data[0]["sha"]
 
 
 def fetch_commit_detail(owner, name, sha):
