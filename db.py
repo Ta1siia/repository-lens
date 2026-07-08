@@ -43,6 +43,18 @@ def update_last_synced(con, repo_id, sha):
     )
     con.commit()
 
+def get_commit_files(con, repo_id):
+    return con.execute(
+        """
+        SELECT commit_files.commit_sha, commit_files.previous_filename, commit_files.filename
+        FROM commit_files
+        JOIN commits ON commit_files.commit_sha = commits.sha
+        WHERE commits.repo_id = ?
+        ORDER BY commit_files.commit_sha
+        """,
+        (repo_id,),
+    ).fetchall()
+
 def init_db():
     con = get_connection()
     with open("db/schema.sql") as file:
