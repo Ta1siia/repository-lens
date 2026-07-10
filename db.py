@@ -43,6 +43,10 @@ def update_last_synced(con, repo_id, sha):
     )
     con.commit()
 
+def get_last_synced(con, repo_id):
+    row = con.execute("SELECT last_synced_sha FROM repos WHERE id = ?", (repo_id,)).fetchone()
+    return row["last_synced_sha"] if row is not None else None
+
 def get_commit_files(con, repo_id):
     return con.execute(
         """

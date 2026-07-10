@@ -1,5 +1,16 @@
 from urllib.parse import urlparse
 
+from flask import Flask, request, jsonify
+from requests.exceptions import HTTPError
+
+from db import get_connection, get_or_create_repo, get_last_synced, init_db
+from github import get_head_sha
+from ingest import ingest_repo
+from analysis import build_graph
+
+app = Flask(__name__)
+init_db()
+
 
 def parse_github_url(url):
     url = url.strip()
@@ -24,3 +35,36 @@ def parse_github_url(url):
         raise ValueError("owner/name cannot be empty")
 
     return owner, name
+
+
+@app.route("/graph", methods=["POST"])
+def graph_route():
+    data = request.get_json(silent=True) or {}
+    url = data.get("url")
+    if not url:
+        return jsonify({"error": "url is required"}), 400
+
+    try:
+        owner, name = parse_github_url(url)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    con = get_connection()
+    try:
+        repo_id = get_or_create_repo(con, owner, name)
+
+        try:
+            head_sha = get_head_sha(owner, name)
+            last_synced = get_last_synced(con, repo_id)
+            if last_synced is None or head_sha != last_synced:
+                ingest_repo(owner, name)
+        except HTTPError as e:
+            status = e.response.status_code if e.response is not None else 502
+            message = "repo not found" if status == 404 else f"GitHub error: {status}"
+            return jsonify({"error": message}), status
+
+        graph = build_graph(con, repo_id)
+    finally:
+        con.close()
+
+    return jsonify(graph)
