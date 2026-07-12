@@ -59,6 +59,19 @@ def get_commit_files(con, repo_id):
         (repo_id,),
     ).fetchall()
 
+def get_recent_commits_for_file(con, repo_id, filename, limit=10):
+    return con.execute(
+        """
+        SELECT commits.sha, commits.message, commits.author, commits.committed_at
+        FROM commits
+        JOIN commit_files ON commit_files.commit_sha = commits.sha
+        WHERE commit_files.filename = ? AND commits.repo_id = ?
+        ORDER BY commits.committed_at DESC
+        LIMIT ?
+        """,
+        (filename, repo_id, limit),
+    ).fetchall()
+
 def init_db():
     con = get_connection()
     with open("db/schema.sql") as file:

@@ -1,5 +1,7 @@
 const TOP_N = 40;
 
+let currentUrl = null;
+
 function trimGraph(graph, n = TOP_N) {
   const topNodes = [...graph.nodes]
     .sort((a, b) => b.weight - a.weight)
@@ -89,6 +91,8 @@ function renderGraph(graph) {
 
   node.call(drag);
 
+  node.on('click', (_event, d) => showCommits(d.id, currentUrl));
+
   const label = g
     .selectAll('text')
     .data(graph.nodes)
@@ -117,8 +121,8 @@ function renderGraph(graph) {
   });
 }
 
-function showError(message) {
-  const container = document.getElementById('graph');
+function showError(message, containerId = 'graph') {
+  const container = document.getElementById(containerId);
   container.innerHTML = '';
   const p = document.createElement('p');
   p.className = 'error';
@@ -127,10 +131,50 @@ function showError(message) {
   container.appendChild(p);
 }
 
+function renderPanel(filename, commits) {
+  const panel = document.getElementById('panel');
+  panel.innerHTML = '';
+
+  const heading = document.createElement('h3');
+  heading.textContent = filename;
+  panel.appendChild(heading);
+
+  const list = document.createElement('ul');
+  commits.forEach(commit => {
+    const item = document.createElement('li');
+    const shortSha = commit.sha.slice(0, 7);
+    const summary = commit.message.split('\n')[0];
+    item.textContent = `${shortSha} — ${summary} (${commit.author}, ${commit.committed_at})`;
+    list.appendChild(item);
+  });
+  panel.appendChild(list);
+}
+
+function showCommits(filename, url) {
+  if (!url) return;
+
+  fetch('/commits', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, filename }),
+  })
+    .then(response =>
+      response.json().then(data => {
+        if (!response.ok) {
+          throw new Error(data.error || `Request failed: ${response.status}`);
+        }
+        return data;
+      })
+    )
+    .then(commits => renderPanel(filename, commits))
+    .catch(error => showError(error.message, 'panel'));
+}
+
 document.getElementById('repo-form').addEventListener('submit', event => {
   event.preventDefault();
 
   const url = document.getElementById('repo-url').value;
+  currentUrl = url;
   const submitBtn = document.getElementById('submit-btn');
 
   submitBtn.disabled = true;
