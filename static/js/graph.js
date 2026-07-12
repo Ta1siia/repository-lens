@@ -22,19 +22,20 @@ function toD3Format(graph) {
 function renderGraph(graph) {
     d3.select("#graph").selectAll("*").remove();
 
-    const width = 800;
-    const height = 600;
+    const width = 1200;
+    const height = 800;
     const svg = d3.select("#graph").append("svg").attr("width", width).attr("height", height);
 
     const [minWeight, maxWeight] = d3.extent(graph.nodes, (d) => d.weight);
     const radiusScale = d3.scaleSqrt().domain([minWeight, maxWeight]).range([4, 20]);
+    graph.nodes.forEach((d) => (d.r = radiusScale(d.weight)));
 
     const simulation = d3
         .forceSimulation(graph.nodes)
         .force("link", d3.forceLink(graph.links).id((d) => d.id))
         .force("charge", d3.forceManyBody())
         .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("collide", d3.forceCollide().radius((d) => radiusScale(d.weight) + 2));
+        .force("collide", d3.forceCollide().radius((d) => d.r + 2));
 
     const link = svg.selectAll("line").data(graph.links).join("line").attr("stroke", "#999");
 
@@ -42,8 +43,17 @@ function renderGraph(graph) {
         .selectAll("circle")
         .data(graph.nodes)
         .join("circle")
-        .attr("r", (d) => radiusScale(d.weight))
+        .attr("r", (d) => d.r)
         .attr("fill", "#69b3a2");
+
+    const label = svg
+        .selectAll("text")
+        .data(graph.nodes)
+        .join("text")
+        .text((d) => d.id.split("/").pop())
+        .attr("font-size", 10)
+        .attr("dx", 8)
+        .attr("dy", 4);
 
     simulation.on("tick", () => {
         link
@@ -52,14 +62,9 @@ function renderGraph(graph) {
             .attr("x2", (d) => d.target.x)
             .attr("y2", (d) => d.target.y);
         node
-            .attr("cx", (d) => {
-                const r = radiusScale(d.weight);
-                return (d.x = Math.max(r, Math.min(width - r, d.x)));
-            })
-            .attr("cy", (d) => {
-                const r = radiusScale(d.weight);
-                return (d.y = Math.max(r, Math.min(height - r, d.y)));
-            });
+            .attr("cx", (d) => (d.x = Math.max(d.r, Math.min(width - d.r, d.x))))
+            .attr("cy", (d) => (d.y = Math.max(d.r, Math.min(height - d.r, d.y))));
+        label.attr("x", (d) => d.x).attr("y", (d) => d.y);
     });
 }
 
