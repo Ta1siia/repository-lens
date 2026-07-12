@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from requests.exceptions import HTTPError
 
 from db import get_connection, get_or_create_repo, get_last_synced, init_db
@@ -68,3 +68,7 @@ def graph_route():
         con.close()
 
     return jsonify(graph)
+
+@app.route("/")
+def index():
+    return render_template("index.html")
