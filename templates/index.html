@@ -1,18 +1,23 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Repository Lens</title>
-</head>
-<body>
+  </head>
+  <body>
     <form id="repo-form">
-        <input type="text" id="repo-url" placeholder="https://github.com/owner/repo" required>
-        <button type="submit">Visualize</button>
+      <input
+        type="text"
+        id="repo-url"
+        placeholder="https://github.com/owner/repo"
+        required
+      />
+      <button type="submit" id="submit-btn">Visualize</button>
     </form>
 
     <div id="graph"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script src="{{ url_for('static', filename='js/graph.js') }}"></script>
-</body>
+  </body>
 </html>
