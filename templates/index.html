@@ -2,6 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
     <title>Repository Lens</title>
   </head>
   <body>
@@ -14,10 +18,10 @@
       />
       <button type="submit" id="submit-btn">Visualize</button>
     </form>
-
-    <div id="graph"></div>
-    <div id="panel"></div>
-
+    <div id="main">
+      <div id="graph"></div>
+      <div id="panel"></div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script src="{{ url_for('static', filename='js/graph.js') }}"></script>
   </body>

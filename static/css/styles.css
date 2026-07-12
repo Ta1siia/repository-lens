@@ -1,0 +1,132 @@
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --accent: #69b3a2;
+
+  --font-ui: -apple-system, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+#repo-form {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+#repo-url {
+  flex: 1;
+  max-width: 400px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+#submit-btn {
+  padding: 8px 16px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: var(--bg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* main area: graph left, panel right */
+#graph {
+  flex: 1;
+  overflow: hidden;
+}
+
+#panel {
+  width: 380px;
+  padding: 16px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+#main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* graph SVG elements */
+#graph svg {
+  display: block;
+}
+
+#graph text {
+  fill: var(--text);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  pointer-events: none;
+}
+
+#graph line {
+  stroke: var(--border);
+  stroke-opacity: 0.6;
+}
+
+#graph circle {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 1.5px;
+}
+
+#panel h3 {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent);
+  word-break: break-all;
+  margin: 0 0 12px;
+}
+
+#panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+#panel li {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.4;
+}
+
+#summary {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.summary-loading {
+  color: var(--text-muted);
+  font-style: italic;
+}
