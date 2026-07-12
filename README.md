@@ -187,6 +187,8 @@ To deploy this project run
   co-change graph itself).
 - **No dependency graphs, diffs, private-repo support, or team analytics.**
   Explicitly out of scope for this project.
+- On Render's free tier, very large repositories (e.g., facebook/react) may time out during first-visit ingest due to limited CPU — smaller/medium repos ingest reliably within 1-2 minutes.
+  This is a hosting-tier constraint, not an application limit; ingest completes normally with more CPU (e.g., local development, or a paid Render tier).
 
 ## AI use
 
