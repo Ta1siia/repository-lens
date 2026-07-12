@@ -27,7 +27,7 @@ function toD3Format(graph) {
 function renderGraph(graph) {
   d3.select('#graph').selectAll('*').remove();
 
-  const width = 1200;
+  const width = document.getElementById('graph').clientWidth;
   const height = 800;
   const svg = d3
     .select('#graph')
@@ -69,6 +69,25 @@ function renderGraph(graph) {
     .join('circle')
     .attr('r', d => d.r)
     .attr('fill', '#69b3a2');
+
+  const drag = d3
+    .drag()
+    .on('start', (event, d) => {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    })
+    .on('drag', (event, d) => {
+      d.fx = event.x;
+      d.fy = event.y;
+    })
+    .on('end', (event, d) => {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null;
+      d.fy = null;
+    });
+
+  node.call(drag);
 
   const label = g
     .selectAll('text')
