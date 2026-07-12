@@ -19,6 +19,8 @@ def parse_github_url(url):
         raise ValueError("URL is empty")
 
     if "://" not in url:
+        # Accept both bare "owner/repo" and "github.com/owner/repo" —
+        # only prefix the host if it's missing too.
         url = "https://" + url if "github.com" in url else "https://github.com/" + url
 
     parsed = urlparse(url)
@@ -56,6 +58,8 @@ def graph_route():
 
         try:
             head_sha = get_head_sha(owner, name)
+            # Only re-ingest if the repo's HEAD moved since last sync —
+            # this is what makes repeat visits fast.
             last_synced = get_last_synced(con, repo_id)
             if last_synced is None or head_sha != last_synced:
                 ingest_repo(owner, name)
@@ -110,10 +114,13 @@ def summary_route():
         repo_id = get_or_create_repo(con, owner, name)
         commits = get_recent_commits_for_file(con, repo_id, filename)
         if not commits:
+            # Don't call the LLM on an empty file history.
             return jsonify({"summary": "No history for this file yet."})
 
         sha = commits[0]["sha"]
         cached = get_summary(con, repo_id, filename)
+        # Cache is valid only if the file hasn't changed since it was generated —
+        # comparing sha, not just checking "does a summary exist."
         if cached is not None and cached["commit_sha"] == sha:
             return jsonify({"summary": cached["summary"]})
 
@@ -121,6 +128,8 @@ def summary_route():
         try:
             summary = summarize_commits(messages)
         except Exception:
+            # Gemini call can fail (due to quota or network) — degrade gracefully
+            # instead of a raw 500.
             return jsonify({"error": "summary generation is temporarily unavailable"}), 502
 
         save_summary(con, repo_id, filename, sha, summary)

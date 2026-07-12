@@ -15,6 +15,9 @@ def github_get(url):
     'X-GitHub-Api-Version': '2026-03-10',
     }
     r = requests.get(url, headers=headers)
+    # Raises HTTPError on 4xx/5xx instead of returning a response object
+    # that looks successful — callers catch this to distinguish "repo not
+    # found" from other failures.
     r.raise_for_status()
     return r
 

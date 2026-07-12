@@ -3,6 +3,8 @@ const TOP_N = 40;
 let currentUrl = null;
 
 function trimGraph(graph, n = TOP_N) {
+  // Drop edges that reference a trimmed-out node, or D3's forceLink
+  // will throw trying to resolve a missing source/target id.
   const topNodes = [...graph.nodes]
     .sort((a, b) => b.weight - a.weight)
     .slice(0, n);
@@ -38,6 +40,8 @@ function renderGraph(graph) {
     .attr('height', height);
 
   const [minWeight, maxWeight] = d3.extent(graph.nodes, d => d.weight);
+  // scaleSqrt, not scaleLinear: circle area grows with r squared, so a linear
+  // scale would make weight differences look bigger than they are.
   const radiusScale = d3
     .scaleSqrt()
     .domain([minWeight, maxWeight])
@@ -46,6 +50,8 @@ function renderGraph(graph) {
 
   const simulation = d3
     .forceSimulation(graph.nodes)
+    // distance/strength/collide radius tuned by hand to stop labels
+    // overlapping on dense clusters — not D3 defaults.
     .force(
       'link',
       d3
@@ -77,8 +83,10 @@ function renderGraph(graph) {
 
   const drag = d3
     .drag()
+    // Reheat the simulation so other nodes react while dragging.
     .on('start', (event, d) => {
       if (!event.active) simulation.alphaTarget(0.3).restart();
+      // fx/fy pin the node to a fixed position, overriding the simulation.
       d.fx = d.x;
       d.fy = d.y;
     })
@@ -87,7 +95,9 @@ function renderGraph(graph) {
       d.fy = event.y;
     })
     .on('end', (event, d) => {
+      // Let the simulation cool back down.
       if (!event.active) simulation.alphaTarget(0);
+      // Release the pin so forces can move the node again.
       d.fx = null;
       d.fy = null;
     });
@@ -121,6 +131,8 @@ function renderGraph(graph) {
       .attr('x2', d => d.target.x)
       .attr('y2', d => d.target.y);
     node
+      // Clamp position to canvas bounds and write it back to d.x/d.y so the
+      // simulation keeps building on the clamped value, not the raw one.
       .attr('cx', d => (d.x = Math.max(d.r, Math.min(width - d.r, d.x))))
       .attr('cy', d => (d.y = Math.max(d.r, Math.min(height - d.r, d.y))));
     label.attr('x', d => d.x).attr('y', d => d.y);
@@ -212,6 +224,8 @@ function showCommits(filename, url) {
     )
     .then(commits => {
       renderPanel(filename, commits);
+      // Summary is a separate, slower request (Gemini call, not cached on
+      // first view) — commits render immediately, summary fills in afterwards.
       showSummary(filename, url);
     })
     .catch(error => showError(error.message, 'panel'));
@@ -248,7 +262,8 @@ document.getElementById('repo-form').addEventListener('submit', event => {
     });
 });
 
-// For the cursor animation
+// Writes cursor position as CSS custom properties (--mouse-x/--mouse-y)
+// that the stylesheet's radial-gradient background reads to follow the cursor.
 const graphContainer = document.getElementById('graph');
 graphContainer.addEventListener('mousemove', event => {
   const rect = graphContainer.getBoundingClientRect();

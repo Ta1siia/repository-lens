@@ -6,6 +6,8 @@ DB_PATH = "db/repolens.db"
 def get_connection():
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
+    # SQLite has foreign keys OFF by default per-connection —
+    # must be re-enabled every time, or FK constraints are silently ignored.
     con.execute("PRAGMA foreign_keys = ON")
     return con
 
@@ -30,6 +32,9 @@ def get_or_create_repo(con, owner, name):
     ).fetchone()
     if existing is not None:
         return existing["id"]
+     # No ON CONFLICT here (unlike save_summary) — repos are looked up by
+    # a UNIQUE(owner, name) pair, not overwritten, so a plain check-then-insert
+    # is correct and there's nothing to update on a repeat call.
     new_id = con.execute(
         "INSERT INTO repos (owner, name) VALUES (?, ?)", (owner, name)
     ).lastrowid
