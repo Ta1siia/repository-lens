@@ -41,20 +41,23 @@ function renderGraph(graph) {
   const radiusScale = d3
     .scaleSqrt()
     .domain([minWeight, maxWeight])
-    .range([4, 20]);
+    .range([8, 36]);
   graph.nodes.forEach(d => (d.r = radiusScale(d.weight)));
 
   const simulation = d3
     .forceSimulation(graph.nodes)
     .force(
       'link',
-      d3.forceLink(graph.links).id(d => d.id)
+      d3
+        .forceLink(graph.links)
+        .id(d => d.id)
+        .distance(90)
     )
-    .force('charge', d3.forceManyBody().strength(-200))
+    .force('charge', d3.forceManyBody().strength(-400))
     .force('center', d3.forceCenter(width / 2, height / 2))
     .force(
       'collide',
-      d3.forceCollide().radius(d => d.r + 15)
+      d3.forceCollide().radius(d => d.r + 25)
     );
 
   const g = svg.append('g');
@@ -97,7 +100,10 @@ function renderGraph(graph) {
     .selectAll('text')
     .data(graph.nodes)
     .join('text')
-    .text(d => d.id.split('/').pop())
+    .text(d => {
+      const name = d.id.split('/').pop();
+      return name.length > 20 ? name.slice(0, 20) + '…' : name;
+    })
     .attr('font-size', 10)
     .attr('dx', 8)
     .attr('dy', 4);
@@ -240,4 +246,15 @@ document.getElementById('repo-form').addEventListener('submit', event => {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Visualize';
     });
+});
+
+// For the cursor animation
+const graphContainer = document.getElementById('graph');
+graphContainer.addEventListener('mousemove', event => {
+  const rect = graphContainer.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+
+  graphContainer.style.setProperty('--mouse-x', `${x}px`);
+  graphContainer.style.setProperty('--mouse-y', `${y}px`);
 });
