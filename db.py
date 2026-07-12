@@ -72,6 +72,30 @@ def get_recent_commits_for_file(con, repo_id, filename, limit=10):
         (filename, repo_id, limit),
     ).fetchall()
 
+def get_summary(con, repo_id, filename):
+    row = con.execute(
+        "SELECT summary, commit_sha FROM summaries WHERE repo_id = ? AND filename = ?",
+        (repo_id, filename),
+    ).fetchone()
+    if row is None:
+        return None
+    return {"summary": row["summary"], "commit_sha": row["commit_sha"]}
+
+def save_summary(con, repo_id, filename, sha, text):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    con.execute(
+        """
+        INSERT INTO summaries (repo_id, filename, commit_sha, summary, generated_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(repo_id, filename) DO UPDATE SET
+            commit_sha = excluded.commit_sha,
+            summary = excluded.summary,
+            generated_at = excluded.generated_at
+        """,
+        (repo_id, filename, sha, text, generated_at),
+    )
+    con.commit()
+
 def init_db():
     con = get_connection()
     with open("db/schema.sql") as file:

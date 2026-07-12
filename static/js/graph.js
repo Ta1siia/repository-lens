@@ -148,6 +148,44 @@ function renderPanel(filename, commits) {
     list.appendChild(item);
   });
   panel.appendChild(list);
+
+  const summaryEl = document.createElement('p');
+  summaryEl.id = 'summary';
+  summaryEl.className = 'summary-loading';
+  summaryEl.textContent = 'Generating summary…';
+  panel.appendChild(summaryEl);
+}
+
+function showSummary(filename, url) {
+  if (!url) return;
+
+  fetch('/summary', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, filename }),
+  })
+    .then(response =>
+      response.json().then(data => {
+        if (!response.ok) {
+          throw new Error(data.error || `Request failed: ${response.status}`);
+        }
+        return data;
+      })
+    )
+    .then(data => {
+      const summaryEl = document.getElementById('summary');
+      if (summaryEl) {
+        summaryEl.textContent = data.summary;
+        summaryEl.className = '';
+      }
+    })
+    .catch(() => {
+      const summaryEl = document.getElementById('summary');
+      if (summaryEl) {
+        summaryEl.textContent = 'summary unavailable';
+        summaryEl.className = '';
+      }
+    });
 }
 
 function showCommits(filename, url) {
@@ -166,7 +204,10 @@ function showCommits(filename, url) {
         return data;
       })
     )
-    .then(commits => renderPanel(filename, commits))
+    .then(commits => {
+      renderPanel(filename, commits);
+      showSummary(filename, url);
+    })
     .catch(error => showError(error.message, 'panel'));
 }
 
