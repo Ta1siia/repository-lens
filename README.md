@@ -5,6 +5,10 @@ of its codebase: node size reflects how often a file changes, edges connect
 files that tend to change together. Click a file to see its recent commit
 history and an AI-generated summary of its evolution.
 
+## Video Demo
+
+![Repository Lens video demo](https://youtu.be/cJgl__tbH_c)
+
 ## What it does
 
 Repository Lens turns raw commit history into a visual map of how a codebase
