@@ -149,6 +149,55 @@ function showError(message, containerId = 'graph') {
   container.appendChild(p);
 }
 
+function showMessage(message, containerId = 'graph') {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  const p = document.createElement('p');
+  p.className = 'status-message';
+  p.textContent = message;
+  container.appendChild(p);
+}
+
+// Wraps fetch + response.json() so a body that isn't valid JSON at all (an
+// HTML error page, a truncated response) produces our own message instead of
+// leaking the browser's raw parse error ("Unexpected token '<'...") to the user.
+function fetchJson(url, body) {
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(response =>
+    response
+      .json()
+      .catch(() => {
+        throw new Error('Something went wrong loading this repository. Please try again.');
+      })
+      .then(data => {
+        if (!response.ok) {
+          throw new Error(data.error || `Request failed: ${response.status}`);
+        }
+        return data;
+      })
+  );
+}
+
+function pollGraphStatus(url, intervalMs = 2000) {
+  return new Promise((resolve, reject) => {
+    const poll = () => {
+      fetchJson('/graph/status', { url })
+        .then(data => {
+          if (data.status === 'ingesting') {
+            setTimeout(poll, intervalMs);
+          } else {
+            resolve(data);
+          }
+        })
+        .catch(reject);
+    };
+    poll();
+  });
+}
+
 function renderPanel(filename, commits) {
   const panel = document.getElementById('panel');
   panel.innerHTML = '';
@@ -177,19 +226,7 @@ function renderPanel(filename, commits) {
 function showSummary(filename, url) {
   if (!url) return;
 
-  fetch('/summary', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, filename }),
-  })
-    .then(response =>
-      response.json().then(data => {
-        if (!response.ok) {
-          throw new Error(data.error || `Request failed: ${response.status}`);
-        }
-        return data;
-      })
-    )
+  fetchJson('/summary', { url, filename })
     .then(data => {
       const summaryEl = document.getElementById('summary');
       if (summaryEl) {
@@ -209,19 +246,7 @@ function showSummary(filename, url) {
 function showCommits(filename, url) {
   if (!url) return;
 
-  fetch('/commits', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, filename }),
-  })
-    .then(response =>
-      response.json().then(data => {
-        if (!response.ok) {
-          throw new Error(data.error || `Request failed: ${response.status}`);
-        }
-        return data;
-      })
-    )
+  fetchJson('/commits', { url, filename })
     .then(commits => {
       renderPanel(filename, commits);
       // Summary is a separate, slower request (Gemini call, not cached on
@@ -240,26 +265,29 @@ document.getElementById('repo-form').addEventListener('submit', event => {
 
   submitBtn.disabled = true;
   submitBtn.textContent = 'Loading…';
+  showMessage('Loading…');
 
-  fetch('/graph', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url }),
-  })
-    .then(response =>
-      response.json().then(data => {
-        if (!response.ok) {
-          throw new Error(data.error || `Request failed: ${response.status}`);
-        }
-        return data;
-      })
-    )
+  fetchJson('/graph', { url })
+    .then(data => {
+      if (data.status === 'ingesting') {
+        showMessage('Ingesting commit history… this may take a few minutes for large repositories');
+        return pollGraphStatus(url);
+      }
+      return data;
+    })
     .then(data => renderGraph(toD3Format(trimGraph(data))))
     .catch(error => showError(error.message))
     .finally(() => {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Visualize';
     });
+});
+
+document.querySelectorAll('.example-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('repo-url').value = btn.dataset.repo;
+    document.getElementById('repo-form').requestSubmit();
+  });
 });
 
 // Writes cursor position as CSS custom properties (--mouse-x/--mouse-y)

@@ -54,6 +54,39 @@ body {
   cursor: pointer;
 }
 
+#examples {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.example-btn {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.example-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.status-message {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 16px;
+}
+
 #graph {
   flex: 1;
   overflow: hidden;

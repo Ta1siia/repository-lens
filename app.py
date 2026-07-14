@@ -1,3 +1,4 @@
+import threading
 from urllib.parse import urlparse
 
 from flask import Flask, request, jsonify, render_template
@@ -11,6 +12,25 @@ from summarize import summarize_commits
 
 app = Flask(__name__)
 init_db()
+
+# Tracks in-flight/completed ingests, keyed by (owner, name). Only correct
+# with a single gunicorn worker — a second worker process would have its own
+# copy of this dict and the lock below wouldn't guard anything across them.
+# Entries are never evicted (one per distinct repo ever visited) — an
+# intentional simplification, not an oversight, given expected traffic.
+_jobs = {}
+_jobs_lock = threading.Lock()
+
+
+def _run_ingest_job(owner, name):
+    key = (owner, name)
+    try:
+        ingest_repo(owner, name)
+        with _jobs_lock:
+            _jobs[key] = {"status": "done"}
+    except Exception as e:
+        with _jobs_lock:
+            _jobs[key] = {"status": "error", "error": str(e)}
 
 
 def parse_github_url(url):
@@ -58,16 +78,55 @@ def graph_route():
 
         try:
             head_sha = get_head_sha(owner, name)
-            # Only re-ingest if the repo's HEAD moved since last sync —
-            # this is what makes repeat visits fast.
-            last_synced = get_last_synced(con, repo_id)
-            if last_synced is None or head_sha != last_synced:
-                ingest_repo(owner, name)
         except HTTPError as e:
             status = e.response.status_code if e.response is not None else 502
             message = "repo not found" if status == 404 else f"GitHub error: {status}"
             return jsonify({"error": message}), status
 
+        # Only re-ingest if the repo's HEAD moved since last sync — this is
+        # what makes repeat visits fast (cache hit, synchronous response).
+        last_synced = get_last_synced(con, repo_id)
+        if last_synced is not None and head_sha == last_synced:
+            graph = build_graph(con, repo_id)
+            return jsonify(graph)
+
+        # Cache miss: kick off ingest in the background instead of blocking
+        # this request, unless a job for this repo is already running.
+        key = (owner, name)
+        with _jobs_lock:
+            job = _jobs.get(key)
+            if job is None or job["status"] != "running":
+                _jobs[key] = {"status": "running"}
+                threading.Thread(target=_run_ingest_job, args=(owner, name), daemon=True).start()
+
+        return jsonify({"status": "ingesting"}), 202
+    finally:
+        con.close()
+
+@app.route("/graph/status", methods=["POST"])
+def graph_status_route():
+    data = request.get_json(silent=True) or {}
+    url = data.get("url")
+    if not url:
+        return jsonify({"error": "url is required"}), 400
+
+    try:
+        owner, name = parse_github_url(url)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    with _jobs_lock:
+        job = _jobs.get((owner, name))
+    status = job["status"] if job is not None else "done"
+
+    if status == "running":
+        return jsonify({"status": "ingesting"}), 202
+    if status == "error":
+        return jsonify({"status": "error", "error": job.get("error", "ingest failed")}), 500
+
+    con = get_connection()
+    try:
+        repo_id = get_or_create_repo(con, owner, name)
         graph = build_graph(con, repo_id)
     finally:
         con.close()

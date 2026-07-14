@@ -14,7 +14,10 @@ def github_get(url):
     'Accept': 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2026-03-10',
     }
-    r = requests.get(url, headers=headers)
+    # timeout guards the background ingest thread: without it, a hung request
+    # would leave a job stuck at "running" forever with nothing to kill it
+    # (no gunicorn worker timeout applies inside a background thread).
+    r = requests.get(url, headers=headers, timeout=30)
     # Raises HTTPError on 4xx/5xx instead of returning a response object
     # that looks successful — callers catch this to distinguish "repo not
     # found" from other failures.
